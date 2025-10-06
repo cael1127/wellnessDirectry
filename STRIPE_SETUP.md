@@ -18,12 +18,12 @@ This guide will walk you through setting up Stripe for your Wellness Directory a
 
 ```env
 # Test keys (for development)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC123...
-STRIPE_SECRET_KEY=sk_test_51ABC123...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_publishable_key
+STRIPE_SECRET_KEY=your_secret_key
 
 # Live keys (for production - use these when you go live)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_51ABC123...
-STRIPE_SECRET_KEY=sk_live_51ABC123...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_live_publishable_key
+STRIPE_SECRET_KEY=your_live_secret_key
 ```
 
 ### 3. Create Subscription Products
@@ -100,14 +100,14 @@ Add these to your `.env.local` file:
 
 ```env
 # Stripe Configuration
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51ABC123...
-STRIPE_SECRET_KEY=sk_test_51ABC123...
-STRIPE_WEBHOOK_SECRET=whsec_ABC123...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_publishable_key
+STRIPE_SECRET_KEY=your_secret_key
+STRIPE_WEBHOOK_SECRET=your_webhook_secret
 
 # Stripe Price IDs
-STRIPE_BASIC_PRICE_ID=price_1ABC123...
-STRIPE_PROFESSIONAL_PRICE_ID=price_1ABC123...
-STRIPE_PREMIUM_PRICE_ID=price_1ABC123...
+STRIPE_BASIC_PRICE_ID=price_your_basic
+STRIPE_PROFESSIONAL_PRICE_ID=price_your_professional
+STRIPE_PREMIUM_PRICE_ID=price_your_premium
 
 # Optional
 STRIPE_ENVIRONMENT=test
