@@ -115,3 +115,4 @@ The `netlify.toml` includes security headers:
 **Remember**: Security is an ongoing process, not a one-time setup. Regular reviews and updates are essential.
 
 
+
