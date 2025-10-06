@@ -1,18 +1,20 @@
 import Stripe from 'stripe'
+import { env } from './env'
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set')
+// Validate environment variables
+if (!env.stripe.secretKey) {
+  throw new Error('STRIPE_SECRET_KEY is not set. Please check your .env.local file.')
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+export const stripe = new Stripe(env.stripe.secretKey, {
   apiVersion: '2024-12-18.acacia',
   typescript: true,
 })
 
 export const STRIPE_CONFIG = {
-  publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-  secretKey: process.env.STRIPE_SECRET_KEY!,
-  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+  publishableKey: env.stripe.publishableKey,
+  secretKey: env.stripe.secretKey,
+  webhookSecret: env.stripe.webhookSecret,
 }
 
 export const SUBSCRIPTION_PLANS = {
@@ -27,7 +29,7 @@ export const SUBSCRIPTION_PLANS = {
       'Basic analytics',
       'Email support'
     ],
-    stripePriceId: process.env.STRIPE_BASIC_PRICE_ID!,
+    stripePriceId: env.stripe.priceIds.basic,
   },
   professional: {
     name: 'Professional',
@@ -43,7 +45,7 @@ export const SUBSCRIPTION_PLANS = {
       'Priority support',
       'Social media integration'
     ],
-    stripePriceId: process.env.STRIPE_PROFESSIONAL_PRICE_ID!,
+    stripePriceId: env.stripe.priceIds.professional,
   },
   premium: {
     name: 'Premium',
@@ -59,7 +61,7 @@ export const SUBSCRIPTION_PLANS = {
       'Dedicated account manager',
       'Custom integrations'
     ],
-    stripePriceId: process.env.STRIPE_PREMIUM_PRICE_ID!,
+    stripePriceId: env.stripe.priceIds.premium,
   },
 } as const
 

@@ -8,6 +8,7 @@ import { BusinessReviews } from '@/components/business-reviews'
 import { BusinessGallery } from '@/components/business-gallery'
 import { BusinessServices } from '@/components/business-services'
 import { Metadata } from 'next'
+import { env } from '@/lib/env'
 
 interface BusinessPageProps {
   params: {
@@ -63,7 +64,7 @@ export async function generateMetadata({ params }: BusinessPageProps): Promise<M
 
   const title = business.seo_title || `${business.name} - ${business.category} in ${business.city}, ${business.state}`
   const description = business.seo_description || business.description
-  const url = `https://yourdomain.com/business/${business.slug}`
+  const url = `${env.app.url}/business/${business.slug}`
   const image = business.profile_image || (business.images && business.images.length > 0 ? business.images[0] : '/placeholder.jpg')
 
   return {

@@ -1,118 +1,157 @@
-# Security Checklist
+# Security Guide
 
-This document outlines security best practices for the Wellness Directory project.
+This document outlines the security measures implemented in the Business Directory application and provides guidelines for maintaining a secure environment.
 
-## Environment Variables Security
+## 🔒 Security Features
 
-### ✅ Current Security Measures
+### 1. **No Hardcoded Secrets**
+All sensitive data is stored in environment variables and never committed to version control.
 
-1. **No Hardcoded Secrets**: All sensitive data is stored in environment variables
-2. **Proper .gitignore**: `.env*` files are ignored by Git
-3. **TypeScript Safety**: Environment variables use non-null assertion (`!`) to ensure they exist
-4. **Netlify Configuration**: Placeholder values in `netlify.toml` prevent accidental exposure
+### 2. **Environment Variable Validation**
+- All required environment variables are validated at startup
+- Clear error messages guide developers to missing configuration
+- Type-safe access to environment variables
 
-### 🔒 Environment Variable Setup
+### 3. **API Key Management**
+- **Supabase Anon Key**: Safe to expose (client-side)
+- **Supabase Service Role Key**: Server-side only (never exposed)
+- **Stripe Publishable Key**: Safe to expose (client-side)
+- **Stripe Secret Key**: Server-side only (never exposed)
+- **Stripe Webhook Secret**: Server-side only (never exposed)
 
-#### Local Development
+### 4. **Database Security**
+- Row Level Security (RLS) policies protect data access
+- User authentication required for sensitive operations
+- Business owners can only access their own data
+
+### 5. **Payment Security**
+- Stripe handles all payment processing
+- No sensitive payment data stored locally
+- Webhook signature verification
+
+## 🛡️ Environment Variables
+
+### Required Variables
 ```bash
-# Create .env.local file (never commit this)
-NEXT_PUBLIC_SUPABASE_URL=your_actual_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_actual_anon_key
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_BASIC_PRICE_ID=price_...
+STRIPE_PROFESSIONAL_PRICE_ID=price_...
+STRIPE_PREMIUM_PRICE_ID=price_...
 ```
 
-#### Production (Netlify)
-1. Go to Netlify Dashboard → Site Settings → Environment Variables
-2. Add variables there (never in code)
-3. Use different Supabase projects for different environments if possible
-
-### ⚠️ Security Warnings
-
-- **Never commit `.env.local`** to version control
-- **Never hardcode secrets** in source code
-- **Use different API keys** for development and production
-- **Regularly rotate** your API keys
-- **Monitor usage** of your Supabase project
-
-## Database Security
-
-### Row Level Security (RLS)
-Consider implementing Row Level Security policies in Supabase:
-
-```sql
--- Example: Only allow users to see their own reviews
-CREATE POLICY "Users can view own reviews" ON reviews
-  FOR SELECT USING (auth.uid() = user_id);
-
--- Example: Only allow business owners to edit their businesses
-CREATE POLICY "Business owners can edit own businesses" ON businesses
-  FOR UPDATE USING (auth.uid() = owner_id);
+### Optional Variables
+```bash
+# Application
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+STRIPE_ENVIRONMENT=test
+NODE_ENV=development
 ```
 
-### API Key Management
-- Use **anon key** for client-side operations (safe to expose)
-- Use **service role key** only for server-side operations (never expose)
-- Consider implementing **API rate limiting**
+## 🔐 Security Best Practices
 
-## Deployment Security
+### 1. **Never Commit Secrets**
+- Add `.env.local` to `.gitignore`
+- Use `env.example` as a template
+- Regularly audit committed files for secrets
 
-### Netlify Security Headers
-The `netlify.toml` includes security headers:
-- `X-Frame-Options: DENY`
-- `X-Content-Type-Options: nosniff`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
+### 2. **Use Different Keys for Different Environments**
+- Development: Test keys
+- Production: Live keys
+- Staging: Separate test keys
 
-### HTTPS
-- Netlify automatically provides HTTPS
-- Ensure all API calls use HTTPS endpoints
+### 3. **Regular Key Rotation**
+- Rotate API keys quarterly
+- Monitor key usage for anomalies
+- Revoke compromised keys immediately
 
-## Data Privacy
+### 4. **Environment-Specific Configuration**
+- Use different Supabase projects for dev/prod
+- Use different Stripe accounts for dev/prod
+- Use different domains for different environments
 
-### User Data
-- Implement proper data retention policies
-- Allow users to delete their data
-- Follow GDPR/CCPA compliance if applicable
+## 🚨 Security Checklist
 
-### Business Data
-- Verify business information before publishing
-- Implement review moderation
-- Allow businesses to claim and update their profiles
+### Before Deployment
+- [ ] All secrets are in environment variables
+- [ ] No hardcoded API keys in code
+- [ ] Environment variables are properly set
+- [ ] RLS policies are enabled
+- [ ] Webhook signatures are verified
+- [ ] HTTPS is enabled in production
 
-## Monitoring
-
-### Recommended Monitoring
-1. **Supabase Dashboard**: Monitor API usage and errors
-2. **Netlify Analytics**: Track site performance
-3. **Error Tracking**: Consider adding Sentry or similar
-4. **Uptime Monitoring**: Use services like UptimeRobot
-
-## Regular Security Tasks
-
-### Monthly
+### Regular Maintenance
 - [ ] Review API key usage
-- [ ] Check for security updates in dependencies
-- [ ] Review access logs
-
-### Quarterly
+- [ ] Check for unauthorized access
+- [ ] Update dependencies
 - [ ] Rotate API keys
-- [ ] Security audit of dependencies
-- [ ] Review and update security policies
+- [ ] Review access logs
+- [ ] Test security measures
 
-## Emergency Response
+### Incident Response
+- [ ] Rotate exposed API keys immediately
+- [ ] Check logs for unauthorized usage
+- [ ] Notify affected users
+- [ ] Update security measures
+- [ ] Document incident
 
-### If Secrets Are Exposed
-1. **Immediately rotate** the exposed API keys
-2. **Check logs** for unauthorized usage
-3. **Update environment variables** in all environments
-4. **Review code** for other potential exposures
+## 🔍 Security Monitoring
 
-### Contact Information
-- Supabase Support: [supabase.com/support](https://supabase.com/support)
-- Netlify Support: [netlify.com/support](https://netlify.com/support)
+### Key Metrics to Track
+- API key usage patterns
+- Failed authentication attempts
+- Unusual payment activity
+- Database access patterns
+- Webhook delivery success rates
+
+### Alerts to Set Up
+- Unusual API key usage
+- Failed webhook signatures
+- Multiple failed login attempts
+- Unauthorized database access
+- Payment processing errors
+
+## 🛠️ Security Tools
+
+### Development
+- Environment variable validation
+- Type-safe configuration access
+- Linting rules for secrets
+- Pre-commit hooks
+
+### Production
+- Stripe webhook verification
+- Supabase RLS policies
+- HTTPS enforcement
+- Rate limiting
+- Error monitoring
+
+## 📚 Additional Resources
+
+- [Supabase Security](https://supabase.com/docs/guides/auth/row-level-security)
+- [Stripe Security](https://stripe.com/docs/security)
+- [Next.js Security](https://nextjs.org/docs/going-to-production#security)
+- [OWASP Security Guidelines](https://owasp.org/www-project-top-ten/)
+
+## 🆘 Support
+
+If you discover a security vulnerability, please:
+1. **Do not** create a public issue
+2. Email security concerns to: [your-security-email]
+3. Include steps to reproduce the issue
+4. Wait for confirmation before public disclosure
+
+## 📝 Security Updates
+
+This document is updated regularly. Last updated: [Current Date]
 
 ---
 
-**Remember**: Security is an ongoing process, not a one-time setup. Regular reviews and updates are essential.
-
-
-
+**Remember**: Security is an ongoing process, not a one-time setup. Regular reviews and updates are essential for maintaining a secure application.

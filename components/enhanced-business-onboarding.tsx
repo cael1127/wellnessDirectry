@@ -19,6 +19,7 @@ import { uploadBusinessImages, validateImageFile } from "@/lib/image-upload"
 import { SUBSCRIPTION_PLANS } from "@/lib/stripe"
 import { toast } from "sonner"
 import { loadStripe } from "@stripe/stripe-js"
+import { env } from "@/lib/env"
 
 const steps = [
   { id: 1, title: "Basic Info", description: "Tell us about your business" },
@@ -221,7 +222,7 @@ export function EnhancedBusinessOnboarding() {
       const { sessionId } = await response.json()
 
       // Redirect to Stripe Checkout
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+      const stripe = await loadStripe(env.stripe.publishableKey)
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId })
       }
