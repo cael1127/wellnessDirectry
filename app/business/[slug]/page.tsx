@@ -2,13 +2,14 @@ import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BusinessProfile } from '@/components/business-profile'
 import { BusinessHeader } from '@/components/business-header'
-import { BusinessContact } from '@/components/business-contact'
-import { BusinessHours } from '@/components/business-hours'
-import { BusinessReviews } from '@/components/business-reviews'
-import { BusinessGallery } from '@/components/business-gallery'
 import { BusinessServices } from '@/components/business-services'
+import { ReviewSection } from '@/components/review-section'
 import { Metadata } from 'next'
 import { env } from '@/lib/env'
+
+// Make this page dynamic (don't prerender at build time)
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
 
 interface BusinessPageProps {
   params: {
@@ -118,37 +119,17 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
       <BusinessHeader business={business} />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            <BusinessProfile business={business} />
-            <BusinessServices business={business} />
-            <BusinessGallery business={business} />
-            <BusinessReviews business={business} />
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <BusinessContact business={business} />
-            <BusinessHours business={business} />
-          </div>
+        <div className="grid grid-cols-1 gap-8">
+          <BusinessProfile business={business} />
+          <BusinessServices business={business} />
+          <ReviewSection businessId={business.id} />
         </div>
       </main>
     </div>
   )
 }
 
-// Generate static params for popular businesses (optional)
-export async function generateStaticParams() {
-  const { data: businesses } = await supabase
-    .from('businesses')
-    .select('slug')
-    .eq('featured', true)
-    .limit(10)
-
-  return businesses?.map((business) => ({
-    slug: business.slug,
-  })) || []
-}
+// Note: generateStaticParams removed since we're using dynamic rendering
+// This ensures pages are built on-demand with fresh data from Supabase
 
 

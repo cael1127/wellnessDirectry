@@ -23,7 +23,7 @@ export function BusinessManagementTable({ businesses }: BusinessManagementTableP
   const filteredBusinesses = businesses.filter((business) => {
     const matchesSearch =
       business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.location.city.toLowerCase().includes(searchQuery.toLowerCase())
+      (business.city || '').toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesStatus =
       statusFilter === "all" ||
@@ -128,7 +128,7 @@ export function BusinessManagementTable({ businesses }: BusinessManagementTableP
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {business.location.city}, {business.location.state}
+                      {business.city}, {business.state}
                     </div>
                   </TableCell>
                   <TableCell>
