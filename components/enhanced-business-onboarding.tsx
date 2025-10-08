@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,6 +41,7 @@ export function EnhancedBusinessOnboarding() {
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
@@ -71,10 +72,46 @@ export function EnhancedBusinessOnboarding() {
     selectedPlan: "professional" as keyof typeof SUBSCRIPTION_PLANS
   })
 
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuthentication()
+  }, [])
+
+  const checkAuthentication = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error("Please sign in to list your business")
+      router.push('/signin?redirect=/onboard')
+      return
+    }
+    setIsCheckingAuth(false)
+  }
+
+  // Don't render form until auth check is complete
+  if (isCheckingAuth) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
   const handleInputChange = (field: string, value: any) => {
     if (field.includes(".")) {
       const [parent, child] = handleNestedField(field, value)
-      setFormData(prev => ({ ...prev, [parent]: { ...prev[parent as keyof typeof prev], [child]: value } }))
+      setFormData(prev => {
+        const parentValue = prev[parent as keyof typeof prev]
+        return {
+          ...prev,
+          [parent]: {
+            ...(typeof parentValue === 'object' && parentValue !== null ? parentValue : {}),
+            [child]: value
+          }
+        }
+      })
     } else {
       setFormData(prev => ({ ...prev, [field]: value }))
     }
@@ -167,10 +204,129 @@ export function EnhancedBusinessOnboarding() {
   const handlePayment = async () => {
     setIsLoading(true)
     try {
-      // First create the business
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error("Please sign in to continue")
+        router.push('/signin?redirect=/onboard')
+        return
+      }
+
+      // Ensure user exists in users table (create or update if exists)
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!existingUser) {
+        // Check if a user with this email exists (might have different ID)
+        const { data: userByEmail } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', user.email!)
+          .maybeSingle()
+
+        if (userByEmail && userByEmail.id !== user.id) {
+          // Delete old user record with wrong ID
+          await supabase
+            .from('users')
+            .delete()
+            .eq('email', user.email!)
+        }
+
+        // Create new user entry with correct auth ID
+        const { error: userCreateError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+            role: 'business_owner',
+          })
+
+        if (userCreateError) {
+          console.error('Error creating user:', userCreateError)
+          toast.error("Failed to set up user profile. Please try again.")
+          return
+        }
+      }
+
+      // Get or create the default directory
+      let directoryId
+      
+      const { data: existingDirectories } = await supabase
+        .from('directories')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingDirectories) {
+        directoryId = existingDirectories.id
+      } else {
+        // Create a default directory if none exists
+        const { data: newDirectory, error: createDirError } = await supabase
+          .from('directories')
+          .insert({
+            slug: 'default',
+            name: 'Health Directory',
+            description: 'A comprehensive directory for finding mental health specialists, physical therapists, medical professionals, and healthcare providers.',
+            is_active: true,
+            theme_config: {
+              primaryColor: '#8611d0',
+              secondaryColor: '#b06cbd',
+              accentColor: '#dcedff'
+            },
+            settings: {
+              allowBusinessRegistration: true,
+              requireVerification: false,
+              maxBusinessesPerUser: 5
+            }
+          })
+          .select('id')
+          .maybeSingle()
+
+        if (createDirError || !newDirectory) {
+          throw new Error('Failed to create default directory. Please contact support.')
+        }
+        
+        directoryId = newDirectory.id
+      }
+
+      // Generate unique slug from business name
+      let baseSlug = formData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 100)
+
+      let slug = baseSlug
+      let counter = 1
+      let slugExists = true
+
+      while (slugExists) {
+        const { data: existingBusiness } = await supabase
+          .from('businesses')
+          .select('id')
+          .eq('directory_id', directoryId)
+          .eq('slug', slug)
+          .maybeSingle()
+
+        if (!existingBusiness) {
+          slugExists = false
+        } else {
+          slug = `${baseSlug}-${counter}`
+          counter++
+        }
+      }
+
+      // Create the business
       const { data: business, error: businessError } = await supabase
         .from('businesses')
         .insert({
+          directory_id: directoryId,
+          slug: slug,
           name: formData.name,
           description: formData.description,
           category: formData.category,
@@ -192,6 +348,7 @@ export function EnhancedBusinessOnboarding() {
           business_hours_notes: formData.businessHoursNotes,
           subscription_status: 'inactive',
           subscription_plan: formData.selectedPlan,
+          owner_id: user.id,
           verified: false
         })
         .select()
@@ -201,9 +358,13 @@ export function EnhancedBusinessOnboarding() {
 
       // Upload images if any
       if (uploadedImages.length > 0) {
-        const imageResult = await uploadBusinessImages(uploadedImages, business.id)
-        if (!imageResult.success) {
-          toast.error('Failed to upload images')
+        try {
+          const imageResult = await uploadBusinessImages(uploadedImages, business.id)
+          if (!imageResult.success) {
+            console.warn('Image upload failed, but continuing with payment')
+          }
+        } catch (error) {
+          console.warn('Image upload failed, but continuing with payment:', error)
         }
       }
 
@@ -219,12 +380,23 @@ export function EnhancedBusinessOnboarding() {
         })
       })
 
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session')
+      }
+
       const { sessionId } = await response.json()
 
       // Redirect to Stripe Checkout
-      const stripe = await loadStripe(env.stripe.publishableKey)
+      const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      if (!stripePublishableKey) {
+        throw new Error('Stripe publishable key is not configured')
+      }
+
+      const stripe = await loadStripe(stripePublishableKey)
       if (stripe) {
         await stripe.redirectToCheckout({ sessionId })
+      } else {
+        throw new Error('Failed to initialize Stripe')
       }
 
     } catch (error) {
