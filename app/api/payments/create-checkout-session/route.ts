@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe, SUBSCRIPTION_PLANS } from '@/lib/stripe'
 import { supabase } from '@/lib/supabase'
 
+// Force dynamic rendering for API routes
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const { businessId, plan, successUrl, cancelUrl } = await request.json()
