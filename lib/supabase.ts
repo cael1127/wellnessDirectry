@@ -1,16 +1,32 @@
 import { createClient } from '@supabase/supabase-js'
-import { env } from './env'
 
-// Validate environment variables
-if (!env.supabase.url) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file.')
+// Lazy initialization to prevent errors during build
+let _supabase: ReturnType<typeof createClient> | null = null
+
+function getSupabaseClient() {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      // During build, return a dummy client to avoid errors
+      if (process.env.NEXT_PHASE === 'phase-production-build') {
+        console.warn('Supabase client not initialized during build - this is expected')
+        return createClient('https://placeholder.supabase.co', 'placeholder-key')
+      }
+      throw new Error('Missing Supabase environment variables')
+    }
+    
+    _supabase = createClient(supabaseUrl, supabaseAnonKey)
+  }
+  return _supabase
 }
 
-if (!env.supabase.anonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable. Please check your .env.local file.')
-}
-
-export const supabase = createClient(env.supabase.url, env.supabase.anonKey)
+export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
+  get(target, prop) {
+    return getSupabaseClient()[prop as keyof ReturnType<typeof createClient>]
+  }
+})
 
 // Database types
 export interface Database {
