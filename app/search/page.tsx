@@ -1,4 +1,4 @@
-import { SearchInterface } from "@/components/search-interface"
+import { EnhancedSearchInterface } from "@/components/enhanced-search-interface"
 import { Header } from "@/components/header"
 
 export default function SearchPage() {
@@ -7,7 +7,7 @@ export default function SearchPage() {
       <Header />
       <main className="py-8">
         <div className="container mx-auto px-4">
-          <SearchInterface />
+          <EnhancedSearchInterface />
         </div>
       </main>
     </div>
