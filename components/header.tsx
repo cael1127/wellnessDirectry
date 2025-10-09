@@ -1,8 +1,54 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Search, Menu, User, Shield } from "lucide-react"
+import { Search, Menu, User, Shield, LogOut } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function Header() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Check current user
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      setIsLoading(false)
+    }
+
+    checkUser()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut()
+      toast.success("Signed out successfully")
+      router.push('/')
+    } catch (error) {
+      toast.error("Failed to sign out")
+    }
+  }
+
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -20,15 +66,14 @@ export function Header() {
             <Link href="/search" className="text-foreground hover:text-primary transition-colors">
               Search
             </Link>
-            <Link href="/categories" className="text-foreground hover:text-primary transition-colors">
-              Categories
-            </Link>
             <Link href="/subscribe" className="text-foreground hover:text-primary transition-colors">
               Pricing
             </Link>
-            <Link href="/dashboard" className="text-foreground hover:text-primary transition-colors">
-              Dashboard
-            </Link>
+            {user && (
+              <Link href="/dashboard" className="text-foreground hover:text-primary transition-colors">
+                Dashboard
+              </Link>
+            )}
             <Link
               href="/admin"
               className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
@@ -40,13 +85,48 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="sm" className="hidden sm:flex bg-transparent">
-              <User className="w-4 h-4 mr-2" />
-              Sign In
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/onboard">List Your Business</Link>
-            </Button>
+            {!isLoading && !user ? (
+              <>
+                <Button variant="outline" size="sm" className="hidden sm:flex" asChild>
+                  <Link href="/signin">
+                    <User className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/signup">Sign Up</Link>
+                </Button>
+              </>
+            ) : user ? (
+              <>
+                <Button size="sm" asChild variant="outline">
+                  <Link href="/onboard">List Your Business</Link>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      <span className="hidden sm:inline">{user.email?.split('@')[0]}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/onboard">List Business</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : null}
             <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="w-4 h-4" />
             </Button>
