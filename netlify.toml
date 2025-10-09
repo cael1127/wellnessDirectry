@@ -1,36 +1,26 @@
 [build]
-  command = "pnpm build"
+  command = "pnpm run build"
   publish = ".next"
 
-[build.environment]
-  NODE_VERSION = "18"
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
+[build.environment]
+  NODE_VERSION = "20"
+  PNPM_VERSION = "10.14.0"
+
+# Redirect rules
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
 
-# Headers for security and performance
+# Headers for security
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
-    X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[headers]]
-  for = "/_next/static/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Environment variables for Netlify
-# Set these in your Netlify dashboard under Site Settings > Environment Variables
-# DO NOT commit actual values to version control
-[context.production.environment]
-  NEXT_PUBLIC_SUPABASE_URL = "set_in_netlify_dashboard"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY = "set_in_netlify_dashboard"
-
-[context.deploy-preview.environment]
-  NEXT_PUBLIC_SUPABASE_URL = "set_in_netlify_dashboard"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY = "set_in_netlify_dashboard"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

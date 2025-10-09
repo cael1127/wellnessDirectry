@@ -1,13 +1,6 @@
-import { AdminDashboard } from "@/components/admin-dashboard"
-import { Header } from "@/components/header"
+import { redirect } from 'next/navigation'
 
+// Redirect /admin to /admin/login
 export default function AdminPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main>
-        <AdminDashboard />
-      </main>
-    </div>
-  )
+  redirect('/admin/login')
 }

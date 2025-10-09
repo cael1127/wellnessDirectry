@@ -1,4 +1,4 @@
-import { BusinessOnboarding } from "@/components/business-onboarding"
+import { EnhancedBusinessOnboarding } from "@/components/enhanced-business-onboarding"
 import { Header } from "@/components/header"
 
 export default function OnboardPage() {
@@ -6,16 +6,18 @@ export default function OnboardPage() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">List Your Wellness Business</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Join thousands of wellness professionals who trust us to help them grow their practice. 
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-12 md:py-16">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-4">
+            List Your Healthcare Practice
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
+            Join healthcare professionals who use our platform to grow their practice. 
             Get started in just a few minutes.
           </p>
         </div>
 
-        <BusinessOnboarding />
+        <EnhancedBusinessOnboarding />
       </main>
     </div>
   )

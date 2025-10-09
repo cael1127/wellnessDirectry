@@ -1,68 +1,53 @@
 import Stripe from 'stripe'
 import { env } from './env'
+import type { SubscriptionPlan } from './subscription-plans'
 
-// Validate environment variables
-if (!env.stripe.secretKey) {
-  throw new Error('STRIPE_SECRET_KEY is not set. Please check your .env.local file.')
+// Check if we're on the server
+const isServer = typeof window === 'undefined'
+
+// Lazy initialization of Stripe - only on server
+let _stripe: Stripe | null = null
+
+export function getStripe(): Stripe {
+  if (!isServer) {
+    throw new Error('Stripe can only be used on the server side')
+  }
+  
+  if (!_stripe) {
+    if (!env.stripe.secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not set. Please check your .env.local file.')
+    }
+    
+    _stripe = new Stripe(env.stripe.secretKey, {
+      apiVersion: '2025-02-24.acacia',
+      typescript: true,
+    })
+  }
+  return _stripe
 }
 
-export const stripe = new Stripe(env.stripe.secretKey, {
-  apiVersion: '2024-12-18.acacia',
-  typescript: true,
-})
+// For backward compatibility - only initialize on server
+export const stripe = isServer ? getStripe() : ({} as Stripe)
 
 export const STRIPE_CONFIG = {
   publishableKey: env.stripe.publishableKey,
-  secretKey: env.stripe.secretKey,
-  webhookSecret: env.stripe.webhookSecret,
+  secretKey: isServer ? env.stripe.secretKey : '',
+  webhookSecret: isServer ? env.stripe.webhookSecret : '',
 }
 
-export const SUBSCRIPTION_PLANS = {
-  basic: {
-    name: 'Basic',
-    price: 2900, // $29.00 in cents
-    features: [
-      'Business listing with basic info',
-      'Contact information display',
-      'Business hours',
-      'Up to 5 service listings',
-      'Basic analytics',
-      'Email support'
-    ],
-    stripePriceId: env.stripe.priceIds.basic,
-  },
-  professional: {
-    name: 'Professional',
-    price: 7900, // $79.00 in cents
-    features: [
-      'Everything in Basic',
-      'Custom business page design',
-      'Unlimited service listings',
-      'Photo gallery (up to 20 images)',
-      'Customer reviews management',
-      'Advanced analytics',
-      'SEO optimization',
-      'Priority support',
-      'Social media integration'
-    ],
-    stripePriceId: env.stripe.priceIds.professional,
-  },
-  premium: {
-    name: 'Premium',
-    price: 14900, // $149.00 in cents
-    features: [
-      'Everything in Professional',
-      'Custom domain support',
-      'Advanced booking system',
-      'Staff management',
-      'Multi-location support',
-      'API access',
-      'White-label options',
-      'Dedicated account manager',
-      'Custom integrations'
-    ],
-    stripePriceId: env.stripe.priceIds.premium,
-  },
-} as const
+// Import plans from separate file to avoid server-only env access on client
+export { SUBSCRIPTION_PLANS } from './subscription-plans'
+export type { SubscriptionPlan } from './subscription-plans'
 
-export type SubscriptionPlan = keyof typeof SUBSCRIPTION_PLANS
+// Server-only: Get Stripe Price IDs
+export function getStripePriceId(plan: SubscriptionPlan): string {
+  if (!isServer) {
+    throw new Error('getStripePriceId can only be called on the server')
+  }
+  
+  const priceIds: Record<SubscriptionPlan, string> = {
+    basic: env.stripe.priceIds.basic,
+  }
+  
+  return priceIds[plan] || env.stripe.priceIds.basic
+}

@@ -14,9 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Plus, X, ArrowRight, ArrowLeft, Check, Upload, Image as ImageIcon, CreditCard } from "lucide-react"
 import { categories, popularTags } from "@/lib/mock-data"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { uploadBusinessImages, validateImageFile } from "@/lib/image-upload"
-import { SUBSCRIPTION_PLANS } from "@/lib/stripe"
+import { BusinessHoursEditor } from "@/components/business-hours-editor"
+import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans"
 import { toast } from "sonner"
 import { loadStripe } from "@stripe/stripe-js"
 import { env } from "@/lib/env"
@@ -25,9 +26,10 @@ const steps = [
   { id: 1, title: "Basic Info", description: "Tell us about your business" },
   { id: 2, title: "Location", description: "Where are you located?" },
   { id: 3, title: "Services", description: "What do you offer?" },
-  { id: 4, title: "Images", description: "Add photos of your business" },
-  { id: 5, title: "Plan", description: "Choose your subscription" },
-  { id: 6, title: "Review", description: "Review and submit" }
+  { id: 4, title: "Hours", description: "Set your business hours" },
+  { id: 5, title: "Images", description: "Add photos of your business" },
+  { id: 6, title: "Plan", description: "Choose your subscription" },
+  { id: 7, title: "Review", description: "Review and submit" }
 ]
 
 const paymentMethods = ['Cash', 'Credit Card', 'Insurance', 'HSA', 'FSA']
@@ -39,10 +41,13 @@ export function EnhancedBusinessOnboarding() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
-  const [uploadedImages, setUploadedImages] = useState<File[]>([])
-  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string>("")
+  const [galleryImages, setGalleryImages] = useState<File[]>([])
+  const [galleryImagePreviews, setGalleryImagePreviews] = useState<string[]>([])
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const profileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -58,6 +63,15 @@ export function EnhancedBusinessOnboarding() {
     website: "",
     tags: [] as string[],
     services: [] as Array<{ name: string; price: string; duration: string }>,
+    hours: {
+      monday: { open: "09:00", close: "17:00" },
+      tuesday: { open: "09:00", close: "17:00" },
+      wednesday: { open: "09:00", close: "17:00" },
+      thursday: { open: "09:00", close: "17:00" },
+      friday: { open: "09:00", close: "17:00" },
+      saturday: { closed: true },
+      sunday: { closed: true },
+    },
     socialLinks: {
       facebook: "",
       instagram: "",
@@ -69,7 +83,7 @@ export function EnhancedBusinessOnboarding() {
     accessibilityFeatures: [] as string[],
     insuranceAccepted: [] as string[],
     businessHoursNotes: "",
-    selectedPlan: "professional" as keyof typeof SUBSCRIPTION_PLANS
+    selectedPlan: "basic" as keyof typeof SUBSCRIPTION_PLANS
   })
 
   // Check authentication on mount
@@ -78,6 +92,7 @@ export function EnhancedBusinessOnboarding() {
   }, [])
 
   const checkAuthentication = async () => {
+    const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       toast.error("Please sign in to list your business")
@@ -163,8 +178,36 @@ export function EnhancedBusinessOnboarding() {
     }))
   }
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      toast.error(validation.error)
+      return
+    }
+
+    setProfileImage(file)
+    const previewUrl = URL.createObjectURL(file)
+    if (profileImagePreview) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+    setProfileImagePreview(previewUrl)
+  }
+
+  const handleGalleryImagesUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
+    
+    // Limit to 3 images total
+    const remainingSlots = 3 - galleryImages.length
+    if (files.length > remainingSlots) {
+      toast.error(`You can only upload ${remainingSlots} more image(s). Maximum 3 gallery photos.`)
+      return
+    }
+    
+    const validFiles: File[] = []
+    const newPreviews: string[] = []
     
     files.forEach(file => {
       const validation = validateImageFile(file)
@@ -173,17 +216,25 @@ export function EnhancedBusinessOnboarding() {
         return
       }
 
-      setUploadedImages(prev => [...prev, file])
-      
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file)
-      setImagePreviewUrls(prev => [...prev, previewUrl])
+      validFiles.push(file)
+      newPreviews.push(URL.createObjectURL(file))
     })
+
+    setGalleryImages(prev => [...prev, ...validFiles])
+    setGalleryImagePreviews(prev => [...prev, ...newPreviews])
   }
 
-  const removeImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index))
-    setImagePreviewUrls(prev => {
+  const removeProfileImage = () => {
+    if (profileImagePreview) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+    setProfileImage(null)
+    setProfileImagePreview("")
+  }
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryImages(prev => prev.filter((_, i) => i !== index))
+    setGalleryImagePreviews(prev => {
       URL.revokeObjectURL(prev[index])
       return prev.filter((_, i) => i !== index)
     })
@@ -205,6 +256,7 @@ export function EnhancedBusinessOnboarding() {
     setIsLoading(true)
     try {
       // Get current user
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error("Please sign in to continue")
@@ -340,16 +392,17 @@ export function EnhancedBusinessOnboarding() {
           website: formData.website,
           tags: formData.tags,
           services: formData.services,
+          hours: formData.hours,
           social_links: formData.socialLinks,
           payment_methods: formData.paymentMethods,
           languages: formData.languages,
           accessibility_features: formData.accessibilityFeatures,
           insurance_accepted: formData.insuranceAccepted,
           business_hours_notes: formData.businessHoursNotes,
-          subscription_status: 'inactive',
+          subscription_status: 'active', // $5 plan - activate immediately
           subscription_plan: formData.selectedPlan,
           owner_id: user.id,
-          verified: false
+          verified: true
         })
         .select()
         .single()
@@ -357,11 +410,26 @@ export function EnhancedBusinessOnboarding() {
       if (businessError) throw businessError
 
       // Upload images if any
-      if (uploadedImages.length > 0) {
+      const allImages: File[] = []
+      if (profileImage) allImages.push(profileImage)
+      if (galleryImages.length > 0) allImages.push(...galleryImages)
+      
+      if (allImages.length > 0) {
         try {
-          const imageResult = await uploadBusinessImages(uploadedImages, business.id)
+          const imageResult = await uploadBusinessImages(allImages, business.id)
           if (!imageResult.success) {
             console.warn('Image upload failed, but continuing with payment')
+          } else {
+            // Set first image (profile) as profile_image
+            if (imageResult.images.length > 0) {
+              await supabase
+                .from('businesses')
+                .update({ 
+                  profile_image: imageResult.images[0].url,
+                  images: imageResult.images.map(img => img.url)
+                })
+                .eq('id', business.id)
+            }
           }
         } catch (error) {
           console.warn('Image upload failed, but continuing with payment:', error)
@@ -468,13 +536,13 @@ export function EnhancedBusinessOnboarding() {
       </div>
 
       <Card>
-        <CardContent className="p-8">
+        <CardContent className="p-4 sm:p-6 md:p-8">
           <Tabs value={currentStep.toString()} className="w-full">
             {/* Step 1: Basic Info */}
-            <TabsContent value="1" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Tell us about your business</h2>
-                <p className="text-muted-foreground">This information will help clients find and understand your services.</p>
+            <TabsContent value="1" className="space-y-4 sm:space-y-6">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Tell us about your business</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">This information will help clients find and understand your services.</p>
               </div>
 
               <div className="space-y-4">
@@ -548,249 +616,346 @@ export function EnhancedBusinessOnboarding() {
             </TabsContent>
 
             {/* Step 2: Location */}
-            <TabsContent value="2" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Where are you located?</h2>
-                <p className="text-muted-foreground">Help clients find you with accurate location information.</p>
+            <TabsContent value="2" className="space-y-4 sm:space-y-6">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Where are you located?</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">Help clients find you with accurate location information.</p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <Label htmlFor="address">Street Address *</Label>
+                  <Label htmlFor="address" className="text-xs sm:text-sm">Street Address *</Label>
                   <Input
                     id="address"
                     value={formData.address}
                     onChange={(e) => handleInputChange("address", e.target.value)}
                     placeholder="123 Wellness Way"
+                    className="h-10 sm:h-11"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="city">City *</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="sm:col-span-2 md:col-span-1">
+                    <Label htmlFor="city" className="text-xs sm:text-sm">City *</Label>
                     <Input
                       id="city"
                       value={formData.city}
                       onChange={(e) => handleInputChange("city", e.target.value)}
                       placeholder="San Francisco"
+                      className="h-10 sm:h-11"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="state">State *</Label>
+                    <Label htmlFor="state" className="text-xs sm:text-sm">State *</Label>
                     <Input
                       id="state"
                       value={formData.state}
                       onChange={(e) => handleInputChange("state", e.target.value)}
-                      placeholder="CA"
+                      placeholder="TX"
+                      className="h-10 sm:h-11"
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="zipCode">ZIP Code *</Label>
+                    <Label htmlFor="zipCode" className="text-xs sm:text-sm">ZIP Code *</Label>
                     <Input
                       id="zipCode"
                       value={formData.zipCode}
                       onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                      placeholder="94102"
+                      placeholder="77979"
+                      className="h-10 sm:h-11"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone" className="text-xs sm:text-sm">Phone Number</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
                       placeholder="(555) 123-4567"
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="email" className="text-xs sm:text-sm">Email Address</Label>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       placeholder="hello@business.com"
+                      className="h-10 sm:h-11"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="website">Website (Optional)</Label>
+                  <Label htmlFor="website" className="text-xs sm:text-sm">Website (Optional)</Label>
                   <Input
                     id="website"
                     type="url"
                     value={formData.website}
                     onChange={(e) => handleInputChange("website", e.target.value)}
                     placeholder="https://www.business.com"
+                    className="h-10 sm:h-11"
                   />
                 </div>
               </div>
             </TabsContent>
 
             {/* Step 3: Services */}
-            <TabsContent value="3" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">What services do you offer?</h2>
-                <p className="text-muted-foreground">List your main services with pricing to help clients understand what you offer.</p>
+            <TabsContent value="3" className="space-y-4 sm:space-y-6">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">What services do you offer?</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">List your main services with pricing to help clients understand what you offer.</p>
               </div>
 
               <div className="space-y-4">
                 {formData.services.map((service, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
-                    <div>
-                      <Label>Service Name</Label>
-                      <Input
-                        value={service.name}
-                        onChange={(e) => updateService(index, "name", e.target.value)}
-                        placeholder="e.g., Individual Therapy"
-                      />
+                  <div key={index} className="flex flex-col gap-3 p-3 sm:p-4 border rounded-lg">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs sm:text-sm">Service Name</Label>
+                        <Input
+                          value={service.name}
+                          onChange={(e) => updateService(index, "name", e.target.value)}
+                          placeholder="e.g., Individual Therapy"
+                          className="h-10 sm:h-11"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs sm:text-sm">Price</Label>
+                        <Input
+                          value={service.price}
+                          onChange={(e) => updateService(index, "price", e.target.value)}
+                          placeholder="e.g., $150"
+                          className="h-10 sm:h-11"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs sm:text-sm">Duration</Label>
+                        <Input
+                          value={service.duration}
+                          onChange={(e) => updateService(index, "duration", e.target.value)}
+                          placeholder="e.g., 50 min"
+                          className="h-10 sm:h-11"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Price</Label>
-                      <Input
-                        value={service.price}
-                        onChange={(e) => updateService(index, "price", e.target.value)}
-                        placeholder="e.g., $150/session"
-                      />
-                    </div>
-                    <div>
-                      <Label>Duration</Label>
-                      <Input
-                        value={service.duration}
-                        onChange={(e) => updateService(index, "duration", e.target.value)}
-                        placeholder="e.g., 50 minutes"
-                      />
-                    </div>
-                    <div className="flex items-end">
+                    <div className="flex justify-end">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => removeService(index)}
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
                       </Button>
                     </div>
                   </div>
                 ))}
 
-                <Button type="button" onClick={addService} variant="outline">
+                <Button type="button" onClick={addService} variant="outline" className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Service
                 </Button>
               </div>
             </TabsContent>
 
-            {/* Step 4: Images */}
-            <TabsContent value="4" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Add photos of your business</h2>
-                <p className="text-muted-foreground">Upload images to showcase your business. You can add up to 20 photos.</p>
+            {/* Step 4: Business Hours */}
+            <TabsContent value="4" className="space-y-4 sm:space-y-6">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">When are you open?</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">Set your business hours so clients know when to visit or call.</p>
               </div>
 
-              <div className="space-y-4">
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-lg font-medium mb-2">Upload Business Photos</p>
-                  <p className="text-muted-foreground mb-4">Drag and drop images here, or click to select</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Choose Images
-                  </Button>
-                </div>
+              <BusinessHoursEditor
+                hours={formData.hours}
+                onChange={(hours) => handleInputChange("hours", hours)}
+              />
+            </TabsContent>
 
-                {imagePreviewUrls.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {imagePreviewUrls.map((url, index) => (
-                      <div key={index} className="relative group">
+            {/* Step 5: Images */}
+            <TabsContent value="5" className="space-y-4 sm:space-y-6">
+              <div className="text-center mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Add Photos</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">Upload 1 profile picture and up to 3 gallery photos</p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Profile Image */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Profile Picture (Required)</CardTitle>
+                    <p className="text-sm text-muted-foreground">This will be the main image for your business listing</p>
+                  </CardHeader>
+                  <CardContent>
+                    {!profileImagePreview ? (
+                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 sm:p-8 text-center">
+                        <input
+                          ref={profileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfileImageUpload}
+                          className="hidden"
+                        />
+                        <ImageIcon className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-muted-foreground" />
+                        <p className="text-base sm:text-lg font-medium mb-2">Upload Profile Picture</p>
+                        <p className="text-sm text-muted-foreground mb-4">Click to select an image (max 5MB)</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="default"
+                          onClick={() => profileInputRef.current?.click()}
+                          className="w-full sm:w-auto"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Choose Image
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="relative">
                         <img
-                          src={url}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
+                          src={profileImagePreview}
+                          alt="Profile preview"
+                          className="w-full h-48 sm:h-64 object-cover rounded-lg"
                         />
                         <Button
                           type="button"
                           variant="destructive"
                           size="sm"
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeImage(index)}
+                          className="absolute top-2 right-2"
+                          onClick={removeProfileImage}
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3 sm:w-4 sm:h-4 mr-0 sm:mr-1" />
+                          <span className="hidden sm:inline">Remove</span>
                         </Button>
+                        <Badge className="absolute bottom-2 left-2 bg-green-500 text-xs sm:text-sm">
+                          Profile Picture
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Step 5: Plan Selection */}
-            <TabsContent value="5" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Choose your plan</h2>
-                <p className="text-muted-foreground">Select the plan that best fits your business needs.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {Object.entries(SUBSCRIPTION_PLANS).map(([key, plan]) => (
-                  <Card 
-                    key={key}
-                    className={`cursor-pointer transition-all ${
-                      formData.selectedPlan === key
-                        ? 'ring-2 ring-primary border-primary'
-                        : 'hover:shadow-md'
-                    } ${key === 'professional' ? 'border-primary' : ''}`}
-                    onClick={() => handleInputChange("selectedPlan", key)}
-                  >
-                    {key === 'professional' && (
-                      <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-                        Recommended
-                      </Badge>
                     )}
-                    <CardHeader>
-                      <CardTitle className="text-xl">{plan.name}</CardTitle>
-                      <div className="text-3xl font-bold">${plan.price / 100}<span className="text-lg text-muted-foreground">/month</span></div>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-green-500" />
-                            <span className="text-sm">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                ))}
+                  </CardContent>
+                </Card>
+
+                {/* Gallery Images */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Gallery Photos (Optional - Max 3)</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Add up to 3 photos showcasing your practice ({galleryImages.length}/3)
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {galleryImages.length < 3 && (
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                          <input
+                            ref={galleryInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handleGalleryImagesUpload}
+                            className="hidden"
+                          />
+                          <ImageIcon className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                          <p className="font-medium mb-2">Add Gallery Photos</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {3 - galleryImages.length} slot(s) remaining
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => galleryInputRef.current?.click()}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Choose Images
+                          </Button>
+                        </div>
+                      )}
+
+                      {galleryImagePreviews.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                          {galleryImagePreviews.map((url, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={url}
+                                alt={`Gallery ${index + 1}`}
+                                className="w-full h-32 sm:h-40 object-cover rounded-lg"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-1 right-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                onClick={() => removeGalleryImage(index)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                              <Badge className="absolute bottom-1 left-1 text-xs bg-blue-500">
+                                Photo {index + 1}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
-            {/* Step 6: Review */}
-            <TabsContent value="6" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Review your listing</h2>
-                <p className="text-muted-foreground">Please review your information before submitting.</p>
+            {/* Step 6: Plan Selection */}
+            <TabsContent value="6" className="space-y-4 sm:space-y-6">
+              <div className="text-center mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Choose your plan</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">Simple, affordable pricing for healthcare professionals</p>
+              </div>
+
+              <div className="max-w-md mx-auto">
+                <Card className="ring-2 ring-primary">
+                  <CardHeader className="text-center">
+                    <Badge className="mx-auto mb-4 bg-green-500">Only Plan Available</Badge>
+                    <CardTitle className="text-3xl">Basic Plan</CardTitle>
+                    <div className="mt-4">
+                      <span className="text-5xl font-bold">$5</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">Everything you need to grow your practice</p>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      {SUBSCRIPTION_PLANS.basic.features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-6 p-4 bg-muted rounded-lg">
+                      <p className="text-sm text-center">
+                        <strong>Total:</strong> $5.00/month + applicable taxes
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Step 7: Review */}
+            <TabsContent value="7" className="space-y-4 sm:space-y-6">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Review your listing</h2>
+                <p className="text-sm sm:text-base text-muted-foreground">Please review your information before submitting.</p>
               </div>
 
               <div className="space-y-6">
@@ -805,8 +970,9 @@ export function EnhancedBusinessOnboarding() {
                     <p><strong>Location:</strong> {formData.address}, {formData.city}, {formData.state} {formData.zipCode}</p>
                     <p><strong>Contact:</strong> {formData.phone} | {formData.email}</p>
                     <p><strong>Services:</strong> {formData.services.length} service(s) listed</p>
-                    <p><strong>Images:</strong> {uploadedImages.length} image(s) uploaded</p>
-                    <p><strong>Plan:</strong> {SUBSCRIPTION_PLANS[formData.selectedPlan].name}</p>
+                    <p><strong>Profile Picture:</strong> {profileImage ? '✅ Uploaded' : '❌ Not uploaded'}</p>
+                    <p><strong>Gallery Photos:</strong> {galleryImages.length}/3 uploaded</p>
+                    <p><strong>Plan:</strong> {SUBSCRIPTION_PLANS[formData.selectedPlan].name} - $5/month</p>
                   </CardContent>
                 </Card>
               </div>
@@ -814,12 +980,13 @@ export function EnhancedBusinessOnboarding() {
           </Tabs>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between mt-6 sm:mt-8">
             <Button
               type="button"
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 1}
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Previous
@@ -830,6 +997,7 @@ export function EnhancedBusinessOnboarding() {
                 type="button"
                 onClick={nextStep}
                 disabled={!isStepValid(currentStep)}
+                className="w-full sm:w-auto order-1 sm:order-2"
               >
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -839,10 +1007,11 @@ export function EnhancedBusinessOnboarding() {
                 type="button"
                 onClick={handlePayment}
                 disabled={isLoading}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto order-1 sm:order-2"
               >
                 <CreditCard className="w-4 h-4 mr-2" />
-                {isLoading ? "Processing..." : "Subscribe & Create Listing"}
+                <span className="hidden sm:inline">{isLoading ? "Processing..." : "Subscribe & Create Listing"}</span>
+                <span className="sm:hidden">{isLoading ? "Processing..." : "Submit & Pay"}</span>
               </Button>
             )}
           </div>

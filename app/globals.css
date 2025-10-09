@@ -123,3 +123,38 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Health directory specific gradients and colors */
+  .bg-health-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .text-health-primary {
+    color: #667eea;
+  }
+  
+  .border-health-primary {
+    border-color: #667eea;
+  }
+  
+  .hover\:bg-health-gradient:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  /* Hide scrollbar for cleaner mobile UX */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Touch-friendly minimum sizes */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

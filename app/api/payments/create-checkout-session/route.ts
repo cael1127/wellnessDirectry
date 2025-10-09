@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, SUBSCRIPTION_PLANS } from '@/lib/stripe'
+import { getStripe, getStripePriceId } from '@/lib/stripe'
+import { SUBSCRIPTION_PLANS } from '@/lib/subscription-plans'
 import { supabase } from '@/lib/supabase'
 
 // Force dynamic rendering for API routes
@@ -40,12 +41,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe checkout session
+    const stripe = getStripe()
+    const priceId = getStripePriceId(plan as keyof typeof SUBSCRIPTION_PLANS)
+    
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
-          price: planConfig.stripePriceId,
+          price: priceId,
           quantity: 1,
         },
       ],

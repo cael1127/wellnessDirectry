@@ -1,46 +1,76 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, MapPin, Phone, Globe, Mail, Clock, Verified, Share2, Heart, Navigation, Camera } from "lucide-react"
+import { Star, MapPin, Phone, Globe, Mail, Clock, Verified, Share2, Heart, Navigation, Camera, Edit } from "lucide-react"
 import type { Business } from "@/types/business"
 import { mockReviews } from "@/lib/mock-data"
 import { ReviewSection } from "@/components/review-section"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 interface BusinessProfileProps {
-  business: Business
+  business: Business & { owner_id?: string }
 }
 
 export function BusinessProfile({ business }: BusinessProfileProps) {
+  const router = useRouter()
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFavorited, setIsFavorited] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  const businessReviews = mockReviews.filter((review) => review.businessId === business.id)
+  const businessReviews = mockReviews.filter((review) => review.business_id === business.id)
+
+  // Check if current user owns this business
+  useEffect(() => {
+    async function checkOwnership() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUserId(user.id)
+        setIsOwner(business.owner_id === user.id)
+      }
+    }
+    checkOwnership()
+  }, [business.owner_id])
 
   const isOpen = () => {
-    const now = new Date()
-    const currentDay = now.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
-    const daySchedule = business.hours[currentDay]
+    try {
+      if (!business.hours || typeof business.hours !== 'object') return false
+      
+      const now = new Date()
+      const currentDay = now.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
+      const daySchedule = business.hours[currentDay]
 
-    if (!daySchedule || daySchedule.closed) return false
+      if (!daySchedule || daySchedule.closed) return false
+      if (!daySchedule.open || !daySchedule.close) return false
 
-    const currentTime = now.getHours() * 100 + now.getMinutes()
-    const openTime = Number.parseInt(daySchedule.open.replace(":", ""))
-    const closeTime = Number.parseInt(daySchedule.close.replace(":", ""))
+      const currentTime = now.getHours() * 100 + now.getMinutes()
+      const openTime = Number.parseInt(daySchedule.open.replace(":", ""))
+      const closeTime = Number.parseInt(daySchedule.close.replace(":", ""))
 
-    return currentTime >= openTime && currentTime <= closeTime
+      return currentTime >= openTime && currentTime <= closeTime
+    } catch {
+      return false
+    }
   }
 
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":")
-    const hour = Number.parseInt(hours)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes} ${ampm}`
+  const formatTime = (time: string | undefined) => {
+    if (!time) return "N/A"
+    try {
+      const [hours, minutes] = time.split(":")
+      const hour = Number.parseInt(hours)
+      const ampm = hour >= 12 ? "PM" : "AM"
+      const displayHour = hour % 12 || 12
+      return `${displayHour}:${minutes} ${ampm}`
+    } catch {
+      return "N/A"
+    }
   }
 
   const handleShare = () => {
@@ -56,10 +86,14 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
     }
   }
 
+  const handleEdit = () => {
+    router.push(`/dashboard/business/${business.id}/edit`)
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
       {/* Hero Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
         {/* Image Gallery */}
         <div className="lg:col-span-2">
           <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
@@ -68,31 +102,33 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
               alt={business.name}
               className="w-full h-full object-cover"
             />
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex flex-col sm:flex-row gap-1 sm:gap-2">
               {business.verified && (
-                <Badge className="bg-green-500 hover:bg-green-600">
-                  <Verified className="w-4 h-4 mr-1" />
-                  Verified
+                <Badge className="bg-green-500 hover:bg-green-600 text-xs">
+                  <Verified className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                  <span className="hidden xs:inline">Verified</span>
                 </Badge>
               )}
-              {business.featured && <Badge className="bg-blue-500 hover:bg-blue-600">Featured</Badge>}
+              {business.featured && <Badge className="bg-blue-500 hover:bg-blue-600 text-xs">Featured</Badge>}
             </div>
-            <div className="absolute bottom-4 left-4 flex items-center gap-2">
-              <Camera className="w-4 h-4 text-white" />
-              <span className="text-white text-sm">
-                {currentImageIndex + 1} / {business.images.length}
-              </span>
-            </div>
+            {business.images.length > 1 && (
+              <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 flex items-center gap-1 sm:gap-2 bg-black/60 px-2 py-1 rounded">
+                <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                <span className="text-white text-xs sm:text-sm">
+                  {currentImageIndex + 1} / {business.images.length}
+                </span>
+              </div>
+            )}
           </div>
 
           {business.images.length > 1 && (
-            <div className="flex gap-2 mt-4 overflow-x-auto">
+            <div className="flex gap-2 mt-3 sm:mt-4 overflow-x-auto pb-2 scrollbar-hide">
               {business.images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
-                    index === currentImageIndex ? "border-primary" : "border-transparent"
+                  className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                    index === currentImageIndex ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
                   }`}
                 >
                   <img
@@ -117,7 +153,7 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
                     <div className="flex items-center gap-1">
                       <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                       <span className="font-semibold text-lg">{business.rating}</span>
-                      <span className="text-muted-foreground">({business.reviewCount} reviews)</span>
+                      <span className="text-muted-foreground">({business.review_count || 0} reviews)</span>
                     </div>
                   </div>
                   <Badge variant={isOpen() ? "default" : "secondary"} className="mb-3">
@@ -126,6 +162,17 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
                   </Badge>
                 </div>
                 <div className="flex gap-2">
+                  {isOwner && (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={() => router.push(`/business/${business.slug}/edit`)}
+                      className="gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="hidden sm:inline">Edit Your Business</span>
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" onClick={() => setIsFavorited(!isFavorited)}>
                     <Heart className={`w-4 h-4 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
                   </Button>
@@ -146,27 +193,27 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">{business.location.address}</p>
+                    <p className="font-medium">{business.address}</p>
                     <p className="text-sm text-muted-foreground">
-                      {business.location.city}, {business.location.state} {business.location.zipCode}
+                      {business.city}, {business.state} {business.zip_code}
                     </p>
                   </div>
                 </div>
 
-                {business.contact.phone && (
+                {business.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-muted-foreground" />
-                    <a href={`tel:${business.contact.phone}`} className="text-primary hover:underline">
-                      {business.contact.phone}
+                    <a href={`tel:${business.phone}`} className="text-primary hover:underline">
+                      {business.phone}
                     </a>
                   </div>
                 )}
 
-                {business.contact.website && (
+                {business.website && (
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-muted-foreground" />
                     <a
-                      href={business.contact.website}
+                      href={business.website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline"
@@ -176,11 +223,11 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
                   </div>
                 )}
 
-                {business.contact.email && (
+                {business.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="w-5 h-5 text-muted-foreground" />
-                    <a href={`mailto:${business.contact.email}`} className="text-primary hover:underline">
-                      {business.contact.email}
+                    <a href={`mailto:${business.email}`} className="text-primary hover:underline">
+                      {business.email}
                     </a>
                   </div>
                 )}
@@ -190,6 +237,12 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
 
               {/* Action Buttons */}
               <div className="space-y-2">
+                {isOwner && (
+                  <Button onClick={handleEdit} className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Your Business
+                  </Button>
+                )}
                 <Button className="w-full">
                   <Navigation className="w-4 h-4 mr-2" />
                   Get Directions
@@ -259,7 +312,7 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Reviews</span>
-                  <span className="font-medium">{business.reviewCount}</span>
+                  <span className="font-medium">{business.review_count || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Verified Business</span>
@@ -270,7 +323,7 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Member Since</span>
                   <span className="font-medium">
-                    {new Date(business.createdAt).toLocaleDateString("en-US", {
+                    {new Date(business.created_at).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
                     })}
@@ -288,14 +341,36 @@ export function BusinessProfile({ business }: BusinessProfileProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {Object.entries(business.hours).map(([day, schedule]) => (
-                  <div key={day} className="flex justify-between items-center py-2">
-                    <span className="font-medium capitalize">{day}</span>
-                    <span className="text-muted-foreground">
-                      {schedule.closed ? "Closed" : `${formatTime(schedule.open)} - ${formatTime(schedule.close)}`}
-                    </span>
-                  </div>
-                ))}
+                {business.hours && typeof business.hours === 'object' && (() => {
+                  // Display days in correct week order (Sunday - Saturday)
+                  const daysOrder = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+                  const dayLabels: Record<string, string> = {
+                    sunday: 'Sunday',
+                    monday: 'Monday',
+                    tuesday: 'Tuesday',
+                    wednesday: 'Wednesday',
+                    thursday: 'Thursday',
+                    friday: 'Friday',
+                    saturday: 'Saturday',
+                  }
+                  
+                  return daysOrder.map((day) => {
+                    const schedule = business.hours[day]
+                    if (!schedule) return null
+                    
+                    return (
+                      <div key={day} className="flex justify-between items-center py-2">
+                        <span className="font-medium">{dayLabels[day]}</span>
+                        <span className="text-muted-foreground">
+                          {schedule?.closed ? "Closed" : `${formatTime(schedule?.open)} - ${formatTime(schedule?.close)}`}
+                        </span>
+                      </div>
+                    )
+                  })
+                })()}
+                {(!business.hours || typeof business.hours !== 'object' || Object.keys(business.hours).length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Hours not set</p>
+                )}
               </div>
             </CardContent>
           </Card>

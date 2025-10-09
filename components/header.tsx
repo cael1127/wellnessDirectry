@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Search, Menu, User, Shield, LogOut } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -22,6 +22,8 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    const supabase = createClient()
+    
     // Check current user
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -41,6 +43,7 @@ export function Header() {
 
   const handleSignOut = async () => {
     try {
+      const supabase = createClient()
       await supabase.auth.signOut()
       toast.success("Signed out successfully")
       router.push('/')
@@ -58,7 +61,7 @@ export function Header() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Search className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">WellnessDirectory</span>
+            <span className="text-lg sm:text-xl font-bold truncate">HealthDirectory</span>
           </Link>
 
           {/* Navigation */}
@@ -75,7 +78,7 @@ export function Header() {
               </Link>
             )}
             <Link
-              href="/admin"
+              href="/admin/login"
               className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
             >
               <Shield className="w-4 h-4" />
@@ -85,6 +88,10 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
+            <Button size="sm" asChild variant="outline">
+              <Link href="/onboard">List Your Business</Link>
+            </Button>
+            
             {!isLoading && !user ? (
               <>
                 <Button variant="outline" size="sm" className="hidden sm:flex" asChild>
@@ -98,34 +105,29 @@ export function Header() {
                 </Button>
               </>
             ) : user ? (
-              <>
-                <Button size="sm" asChild variant="outline">
-                  <Link href="/onboard">List Your Business</Link>
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span className="hidden sm:inline">{user.email?.split('@')[0]}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard">Dashboard</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/onboard">List Business</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span className="hidden sm:inline">{user.email?.split('@')[0]}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/onboard">List Business</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : null}
             <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="w-4 h-4" />

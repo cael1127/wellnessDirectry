@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,21 +27,17 @@ const steps = [
 const subscriptionPlans = [
   {
     name: "Basic",
-    price: 29,
-    features: ["Basic listing", "Contact info", "5 services", "Email support"],
-    recommended: false
-  },
-  {
-    name: "Professional",
-    price: 79,
-    features: ["Everything in Basic", "Custom page", "Unlimited services", "Photo gallery", "Reviews", "Analytics"],
+    price: 5,
+    features: [
+      "Healthcare provider listing",
+      "Contact information display",
+      "Business hours",
+      "Service listings",
+      "Patient reviews",
+      "Basic analytics",
+      "Email support"
+    ],
     recommended: true
-  },
-  {
-    name: "Premium",
-    price: 149,
-    features: ["Everything in Professional", "Custom domain", "Booking system", "API access", "Priority support"],
-    recommended: false
   }
 ]
 
@@ -49,6 +45,7 @@ export function BusinessOnboarding() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -63,8 +60,35 @@ export function BusinessOnboarding() {
     website: "",
     tags: [] as string[],
     services: [] as Array<{ name: string; price: string; duration: string }>,
-    selectedPlan: "professional"
+    selectedPlan: "basic"
   })
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuthentication()
+  }, [])
+
+  const checkAuthentication = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error("Please sign in to list your business")
+      router.push('/signin?redirect=/onboard')
+      return
+    }
+    setIsCheckingAuth(false)
+  }
+
+  // Don't render form until auth check is complete
+  if (isCheckingAuth) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -117,10 +141,48 @@ export function BusinessOnboarding() {
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error("Please sign in to continue")
+        router.push('/signin?redirect=/onboard')
+        return
+      }
+
+      // Get or create default directory
+      let directoryId
+      const { data: directories } = await supabase
+        .from('directories')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1)
+
+      if (directories && directories.length > 0) {
+        directoryId = directories[0].id
+      } else {
+        // Create a default directory if none exists
+        const { data: newDir, error: dirError } = await supabase
+          .from('directories')
+          .insert({
+            slug: 'default-directory',
+            name: 'Health Directory',
+            is_active: true
+          })
+          .select()
+          .single()
+
+        if (dirError) {
+          toast.error("Failed to set up directory")
+          return
+        }
+        directoryId = newDir.id
+      }
+
       // Create business in database
       const { data: business, error } = await supabase
         .from('businesses')
         .insert({
+          directory_id: directoryId,
           name: formData.name,
           description: formData.description,
           category: formData.category,
@@ -134,7 +196,9 @@ export function BusinessOnboarding() {
           website: formData.website,
           tags: formData.tags,
           services: formData.services,
-          subscription_status: 'inactive', // Will be activated after payment
+          subscription_status: 'active', // Active immediately for $5 plan
+          subscription_plan: 'basic',
+          owner_id: user.id,
           verified: false
         })
         .select()

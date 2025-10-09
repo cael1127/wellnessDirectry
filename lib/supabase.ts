@@ -1,40 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Detect if we're in a build phase
-const isBuildTime = typeof window === 'undefined' && (
-  process.env.NEXT_PHASE === 'phase-production-build' ||
-  process.env.NEXT_PHASE === 'phase-development-build' ||
-  !process.env.NEXT_PUBLIC_SUPABASE_URL
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Lazy initialization to prevent errors during build
-let _supabase: ReturnType<typeof createClient> | null = null
-
-function getSupabaseClient() {
-  if (_supabase) {
-    return _supabase
-  }
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  
-  // During build time, return a dummy client
-  if (isBuildTime) {
-    console.warn('Supabase: Using placeholder client during build phase')
-    return createClient('https://placeholder.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MTYxNjE2MTYsImV4cCI6MTk2MTc2MTYxNn0.placeholder')
-  }
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing required Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
-  }
-  
-  _supabase = createClient(supabaseUrl, supabaseAnonKey)
-  return _supabase
-}
-
-export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
-  get(target, prop) {
-    return getSupabaseClient()[prop as keyof ReturnType<typeof createClient>]
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
   }
 })
 

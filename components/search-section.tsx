@@ -26,17 +26,17 @@ export function SearchSection() {
   }
 
   return (
-    <div className="bg-white dark:bg-card rounded-2xl shadow-lg p-6 max-w-5xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <div className="bg-white dark:bg-card rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
         {/* Search Query */}
-        <div className="md:col-span-2">
+        <div className="sm:col-span-2 md:col-span-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Find therapists, nutritionists, trainers..."
+              placeholder="Find therapists, trainers..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-11 sm:h-12"
               onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             />
           </div>
@@ -50,7 +50,7 @@ export function SearchSection() {
               placeholder="ZIP Code"
               value={zipCode}
               onChange={(e) => setZipCode(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-11 sm:h-12"
               onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             />
           </div>
@@ -61,7 +61,7 @@ export function SearchSection() {
           <div className="relative">
             <Navigation className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Select value={radius} onValueChange={setRadius}>
-              <SelectTrigger className="h-12 pl-10">
+              <SelectTrigger className="h-11 sm:h-12 pl-10">
                 <SelectValue placeholder="Radius" />
               </SelectTrigger>
               <SelectContent>
@@ -75,10 +75,10 @@ export function SearchSection() {
           </div>
         </div>
 
-        {/* Category */}
-        <div>
+        {/* Category - Full width on mobile */}
+        <div className="sm:col-span-2 md:col-span-1">
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="h-12">
+            <SelectTrigger className="h-11 sm:h-12">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -93,10 +93,11 @@ export function SearchSection() {
         </div>
       </div>
 
-      <div className="mt-6 text-center">
-        <Button onClick={handleSearch} size="lg" className="px-8">
+      <div className="mt-4 sm:mt-6 text-center">
+        <Button onClick={handleSearch} size="lg" className="w-full sm:w-auto px-6 sm:px-8 h-12">
           <Search className="w-4 h-4 mr-2" />
-          Find Wellness Professionals
+          <span className="hidden sm:inline">Find Health Professionals</span>
+          <span className="sm:hidden">Search</span>
         </Button>
       </div>
     </div>

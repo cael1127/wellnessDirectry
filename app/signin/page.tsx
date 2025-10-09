@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -22,6 +22,7 @@ export default function SignInPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -33,7 +34,7 @@ export default function SignInPage() {
       
       // Redirect to intended page or dashboard
       const redirectTo = new URLSearchParams(window.location.search).get('redirect')
-      router.push(redirectTo || '/dashboard')
+      window.location.href = redirectTo || '/dashboard'
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in")
     } finally {

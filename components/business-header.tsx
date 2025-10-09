@@ -20,15 +20,27 @@ interface BusinessHeaderProps {
 }
 
 export function BusinessHeader({ business }: BusinessHeaderProps) {
-  const formatHours = (hours: Record<string, { open: string; close: string; closed?: boolean }>) => {
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-    const todayHours = hours[today]
-    
-    if (!todayHours || todayHours.closed) {
-      return "Closed today"
+  const formatHours = (hours: any) => {
+    try {
+      if (!hours || typeof hours !== 'object') {
+        return "Hours not available"
+      }
+      
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+      const todayHours = hours[today]
+      
+      if (!todayHours || todayHours.closed) {
+        return "Closed today"
+      }
+      
+      if (!todayHours.open || !todayHours.close) {
+        return "Hours not available"
+      }
+      
+      return `Open today ${todayHours.open} - ${todayHours.close}`
+    } catch {
+      return "Hours not available"
     }
-    
-    return `Open today ${todayHours.open} - ${todayHours.close}`
   }
 
   return (
@@ -65,24 +77,26 @@ export function BusinessHeader({ business }: BusinessHeaderProps) {
             <div className="flex items-center gap-4 mb-6">
               <div className="flex items-center gap-1">
                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                <span className="text-2xl font-bold">{business.rating}</span>
-                <span className="text-muted-foreground">({business.reviewCount} reviews)</span>
+                <span className="text-2xl font-bold">{business.rating || '0.0'}</span>
+                <span className="text-muted-foreground">({business.review_count || 0} reviews)</span>
               </div>
             </div>
 
             {/* Tags */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {business.tags.slice(0, 8).map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              {business.tags.length > 8 && (
-                <Badge variant="outline" className="text-xs">
-                  +{business.tags.length - 8} more
-                </Badge>
-              )}
-            </div>
+            {business.tags && business.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {business.tags.slice(0, 8).map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+                {business.tags.length > 8 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{business.tags.length - 8} more
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Contact Card */}
@@ -107,52 +121,52 @@ export function BusinessHeader({ business }: BusinessHeaderProps) {
                     <div>
                       <p className="font-medium">Location</p>
                       <p className="text-sm text-muted-foreground">
-                        {business.location.address}<br />
-                        {business.location.city}, {business.location.state} {business.location.zipCode}
+                        {business.address}<br />
+                        {business.city}, {business.state} {business.zip_code}
                       </p>
                     </div>
                   </div>
 
                   {/* Phone */}
-                  {business.contact.phone && (
+                  {business.phone && (
                     <div className="flex items-center gap-3">
                       <Phone className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Phone</p>
                         <a 
-                          href={`tel:${business.contact.phone}`}
+                          href={`tel:${business.phone}`}
                           className="text-sm text-blue-600 hover:underline"
                         >
-                          {business.contact.phone}
+                          {business.phone}
                         </a>
                       </div>
                     </div>
                   )}
 
                   {/* Email */}
-                  {business.contact.email && (
+                  {business.email && (
                     <div className="flex items-center gap-3">
                       <Mail className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Email</p>
                         <a 
-                          href={`mailto:${business.contact.email}`}
+                          href={`mailto:${business.email}`}
                           className="text-sm text-blue-600 hover:underline"
                         >
-                          {business.contact.email}
+                          {business.email}
                         </a>
                       </div>
                     </div>
                   )}
 
                   {/* Website */}
-                  {business.contact.website && (
+                  {business.website && (
                     <div className="flex items-center gap-3">
                       <Globe className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Website</p>
                         <a 
-                          href={business.contact.website}
+                          href={business.website}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-blue-600 hover:underline"

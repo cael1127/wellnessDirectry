@@ -1,74 +1,57 @@
+// Business type that matches Supabase database schema
 export interface Business {
   id: string
+  directory_id: string
   slug: string
   name: string
   description: string
   category: string
   subcategory?: string
-  location: {
-    address: string
-    city: string
-    state: string
-    zipCode: string
-    coordinates?: {
-      lat: number
-      lng: number
-    }
-  }
-  contact: {
-    phone?: string
-    email?: string
-    website?: string
-  }
+  // Flat address fields
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  latitude?: number | null
+  longitude?: number | null
+  // Flat contact fields
+  phone?: string
+  email?: string
+  website?: string
   tags: string[]
   images: string[]
-  profileImage?: string
-  hours: {
-    [key: string]: {
-      open: string
-      close: string
-      closed?: boolean
-    }
-  }
-  rating: number
-  reviewCount: number
+  profile_image?: string
+  hours: any // JSON field
+  rating: string | number
+  review_count: number
   verified: boolean
   featured: boolean
-  ownerId?: string
-  subscriptionStatus: 'inactive' | 'active' | 'expired' | 'cancelled'
-  subscriptionPlan: 'basic' | 'professional' | 'premium'
-  subscriptionExpiresAt?: string
-  customDomain?: string
-  seoTitle?: string
-  seoDescription?: string
-  services: Array<{
-    name: string
-    price: string
-    duration: string
-  }>
-  socialLinks?: {
-    facebook?: string
-    instagram?: string
-    linkedin?: string
-    twitter?: string
-  }
-  paymentMethods?: string[]
+  subscription_status?: string
+  subscription_plan?: string
+  owner_id?: string
+  seo_title?: string
+  seo_description?: string
+  services: any // JSON field
+  social_links?: any // JSON field
+  payment_methods?: string[]
   languages?: string[]
-  accessibilityFeatures?: string[]
-  insuranceAccepted?: string[]
-  businessHoursNotes?: string
-  createdAt: string
-  updatedAt: string
+  accessibility_features?: string[]
+  insurance_accepted?: string[]
+  business_hours_notes?: string
+  created_at: string
+  updated_at: string
+  distance?: number // Calculated field for search results
+  reviews?: Review[] // Optional reviews array when joined
 }
 
 export interface Review {
   id: string
-  businessId: string
-  userId: string
-  userName: string
+  business_id: string
+  user_id: string
+  user_name: string
   rating: number
   comment: string
-  createdAt: string
+  created_at: string
   helpful: number
 }
 
@@ -77,8 +60,8 @@ export interface User {
   name: string
   email: string
   role: "user" | "business_owner" | "admin"
-  businessIds?: string[]
-  createdAt: string
+  business_ids?: string[]
+  created_at: string
 }
 
 export interface SearchFilters {
@@ -88,5 +71,5 @@ export interface SearchFilters {
   rating?: number
   tags?: string[]
   sortBy?: "relevance" | "rating" | "distance" | "newest"
-  radius?: number
+  radius?: number // Distance radius in miles
 }

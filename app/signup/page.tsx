@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -23,6 +23,7 @@ export default function SignUpPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -51,8 +52,10 @@ export default function SignUpPage() {
         }
       }
 
-      toast.success("Account created! Please check your email to verify your account.")
-      router.push('/signin')
+      toast.success("Account created successfully!")
+      
+      // Redirect to dashboard
+      window.location.href = '/dashboard'
     } catch (error: any) {
       toast.error(error.message || "Failed to sign up")
     } finally {

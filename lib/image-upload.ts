@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { createClient } from './supabase/client'
 
 export interface ImageUploadResult {
   url: string
@@ -12,6 +12,8 @@ export async function uploadImage(
   folder: string = 'uploads'
 ): Promise<ImageUploadResult> {
   try {
+    const supabase = createClient()
+    
     // Generate unique filename
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
@@ -54,6 +56,7 @@ export async function deleteImage(
   bucket: string = 'business-images'
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = createClient()
     const { error } = await supabase.storage
       .from(bucket)
       .remove([path])
@@ -78,6 +81,7 @@ export async function uploadBusinessImages(
   businessId: string
 ): Promise<{ success: boolean; images: ImageUploadResult[]; error?: string }> {
   try {
+    const supabase = createClient()
     const uploadPromises = files.map(file => uploadImage(file, 'business-images', businessId))
     const results = await Promise.all(uploadPromises)
 

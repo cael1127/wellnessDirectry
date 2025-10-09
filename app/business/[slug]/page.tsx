@@ -1,23 +1,26 @@
 import { notFound } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { BusinessProfile } from '@/components/business-profile'
 import { BusinessHeader } from '@/components/business-header'
 import { BusinessServices } from '@/components/business-services'
 import { ReviewSection } from '@/components/review-section'
+import { Header } from '@/components/header'
 import { Metadata } from 'next'
 import { env } from '@/lib/env'
 
 // Make this page dynamic (don't prerender at build time)
 export const dynamic = 'force-dynamic'
 export const dynamicParams = true
+export const revalidate = 0 // Don't cache, always fetch fresh data
 
 interface BusinessPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 async function getBusiness(slug: string) {
+  const supabase = await createClient()
   const { data: business, error } = await supabase
     .from('businesses')
     .select(`
@@ -32,7 +35,6 @@ async function getBusiness(slug: string) {
       )
     `)
     .eq('slug', slug)
-    .eq('subscription_status', 'active')
     .single()
 
   if (error || !business) {
@@ -54,7 +56,8 @@ async function getBusiness(slug: string) {
 }
 
 export async function generateMetadata({ params }: BusinessPageProps): Promise<Metadata> {
-  const business = await getBusiness(params.slug)
+  const { slug } = await params
+  const business = await getBusiness(slug)
   
   if (!business) {
     return {
@@ -108,7 +111,8 @@ export async function generateMetadata({ params }: BusinessPageProps): Promise<M
 }
 
 export default async function BusinessPage({ params }: BusinessPageProps) {
-  const business = await getBusiness(params.slug)
+  const { slug } = await params
+  const business = await getBusiness(slug)
 
   if (!business) {
     notFound()
@@ -116,13 +120,18 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <BusinessHeader business={business} />
       
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 gap-8">
           <BusinessProfile business={business} />
           <BusinessServices business={business} />
-          <ReviewSection businessId={business.id} />
+          <ReviewSection 
+            businessId={business.id} 
+            business={business}
+            reviews={business.reviews || []} 
+          />
         </div>
       </main>
     </div>

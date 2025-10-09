@@ -12,19 +12,19 @@ import type { Review, Business } from "@/types/business"
 interface ReviewSectionProps {
   businessId: string
   business: Business
-  reviews: Review[]
+  reviews?: Review[]
 }
 
-export function ReviewSection({ businessId, business, reviews }: ReviewSectionProps) {
+export function ReviewSection({ businessId, business, reviews = [] }: ReviewSectionProps) {
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest")
   const [helpfulReviews, setHelpfulReviews] = useState<Set<string>>(new Set())
 
-  const sortedReviews = [...reviews].sort((a, b) => {
+  const sortedReviews = [...(reviews || [])].sort((a, b) => {
     switch (sortBy) {
       case "newest":
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       case "oldest":
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       case "highest":
         return b.rating - a.rating
       case "lowest":
@@ -35,7 +35,7 @@ export function ReviewSection({ businessId, business, reviews }: ReviewSectionPr
   })
 
   const averageRating =
-    reviews.length > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0
+    (reviews || []).length > 0 ? (reviews || []).reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0
 
   const ratingDistribution = [5, 4, 3, 2, 1].map((rating) => ({
     rating,

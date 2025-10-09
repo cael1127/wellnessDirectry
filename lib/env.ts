@@ -28,6 +28,7 @@ const optionalEnvVars = {
   STRIPE_ENVIRONMENT: process.env.STRIPE_ENVIRONMENT || 'test',
   STRIPE_ACCOUNT_ID: process.env.STRIPE_ACCOUNT_ID,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123', // Default password (change in production!)
   NODE_ENV: process.env.NODE_ENV || 'development',
 } as const
 
@@ -97,6 +98,11 @@ export const env = {
   app: {
     url: optionalEnvVars.NEXT_PUBLIC_APP_URL,
     nodeEnv: optionalEnvVars.NODE_ENV as 'development' | 'production' | 'test',
+  },
+  
+  // Admin
+  admin: {
+    password: optionalEnvVars.ADMIN_PASSWORD,
   },
   
   // Utility functions

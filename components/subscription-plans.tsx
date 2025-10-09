@@ -9,65 +9,26 @@ import { Check, Star, Zap, Crown } from "lucide-react"
 const plans = [
   {
     name: "Basic",
-    price: 29,
+    price: 5,
     period: "month",
-    description: "Perfect for individual practitioners",
+    description: "Everything you need to list your healthcare practice",
     icon: Star,
     features: [
-      "Business listing with basic info",
+      "Healthcare provider listing",
       "Contact information display",
       "Business hours",
-      "Up to 5 service listings",
+      "Service listings",
+      "Patient reviews",
       "Basic analytics",
       "Email support"
     ],
-    popular: false,
-    cta: "Start Basic Plan"
-  },
-  {
-    name: "Professional",
-    price: 79,
-    period: "month",
-    description: "Ideal for growing practices",
-    icon: Zap,
-    features: [
-      "Everything in Basic",
-      "Custom business page design",
-      "Unlimited service listings",
-      "Photo gallery (up to 20 images)",
-      "Customer reviews management",
-      "Advanced analytics",
-      "SEO optimization",
-      "Priority support",
-      "Social media integration"
-    ],
     popular: true,
-    cta: "Start Professional Plan"
-  },
-  {
-    name: "Premium",
-    price: 149,
-    period: "month",
-    description: "For established wellness centers",
-    icon: Crown,
-    features: [
-      "Everything in Professional",
-      "Custom domain support",
-      "Advanced booking system",
-      "Staff management",
-      "Multi-location support",
-      "API access",
-      "White-label options",
-      "Dedicated account manager",
-      "Custom integrations"
-    ],
-    popular: false,
-    cta: "Start Premium Plan"
+    cta: "Get Started - $5/month"
   }
 ]
 
 export function SubscriptionPlans() {
-  const [selectedPlan, setSelectedPlan] = useState("professional")
+  const [selectedPlan, setSelectedPlan] = useState("basic")
 
   const handleSubscribe = (planName: string) => {
     // In a real app, this would integrate with Stripe or similar
@@ -76,7 +37,7 @@ export function SubscriptionPlans() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+    <div className="grid grid-cols-1 max-w-xl mx-auto">
       {plans.map((plan) => {
         const Icon = plan.icon
         const isSelected = selectedPlan === plan.name.toLowerCase()
