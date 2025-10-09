@@ -455,9 +455,9 @@ export function EnhancedBusinessOnboarding() {
       const { sessionId } = await response.json()
 
       // Redirect to Stripe Checkout
-      const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      const stripePublishableKey = env.stripe.publishableKey
       if (!stripePublishableKey) {
-        throw new Error('Stripe publishable key is not configured')
+        throw new Error('Stripe publishable key is not configured. Please check your environment variables.')
       }
 
       const stripe = await loadStripe(stripePublishableKey)

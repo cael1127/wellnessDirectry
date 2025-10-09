@@ -10,7 +10,7 @@ Copy these to **Netlify Dashboard → Site Settings → Environment Variables**
 
 ### **Supabase (Required)**
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://fcmqnltokjuhclxgzfqr.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-from-supabase
 ```
 
@@ -24,7 +24,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-from-supabase
 ```
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key
 STRIPE_SECRET_KEY=sk_live_your_secret_key
-STRIPE_BASIC_PRICE_ID=price_1SDVfcAtvzVVerSsGKudVpF5
+STRIPE_BASIC_PRICE_ID=
 ```
 
 **Where to find:**
@@ -164,35 +164,4 @@ After setting environment variables, verify:
 
 ---
 
-## 📱 **Example: Complete Production Setup**
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://fcmqnltokjuhclxgzfqr.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-# Stripe (LIVE KEYS)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_51SDVfcAtvzVVerSswpQ...
-STRIPE_SECRET_KEY=sk_live_51SDVfcAtvzVVerSsL3Xd...
-STRIPE_BASIC_PRICE_ID=price_1SDVfcAtvzVVerSsGKudVpF5
-
-# App
-NEXT_PUBLIC_APP_URL=https://healthdirectory.netlify.app
-ADMIN_PASSWORD=SecurePassword123!@#
-
-# Optional
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-STRIPE_WEBHOOK_SECRET=whsec_1234567890abcdefghijklmnop
-```
-
----
-
-## ⚡ **Ready to Deploy!**
-
-Once all variables are set in Netlify:
-1. Trigger deploy
-2. Wait 2-5 minutes
-3. Visit your site
-4. Test all features
-5. You're live! 🎉
-
+## 
