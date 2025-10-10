@@ -1,5 +1,24 @@
 import { EnhancedBusinessOnboarding } from "@/components/enhanced-business-onboarding"
 import { Header } from "@/components/header"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: 'List Your Healthcare Practice',
+  description: 'Get your healthcare practice listed on MinBod in minutes. Join health professionals who use our platform to grow their practice and connect with patients.',
+  alternates: {
+    canonical: '/onboard',
+  },
+  openGraph: {
+    title: 'List Your Healthcare Practice | MinBod',
+    description: 'Get your healthcare practice listed and start connecting with patients in your area.',
+    type: 'website',
+    url: 'https://minbod.netlify.app/onboard',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
 
 export default function OnboardPage() {
   return (

@@ -2,10 +2,57 @@ import { SearchSection } from "@/components/search-section"
 import { FeaturedBusinesses } from "@/components/featured-businesses"
 import { CategoryGrid } from "@/components/category-grid"
 import { Header } from "@/components/header"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: 'Find Health & Wellness Professionals Near You',
+  description: 'Connect with trusted therapists, psychiatrists, health coaches, personal trainers, and registered dietitians. Browse verified health professionals in your area.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'MinBod - Find Health & Wellness Professionals',
+    description: 'Connect with trusted health and wellness professionals in your area. Browse therapists, psychiatrists, health coaches, trainers, and dietitians.',
+    type: 'website',
+    url: 'https://minbod.netlify.app',
+  },
+}
 
 export default function HomePage() {
+  // JSON-LD Structured Data
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'MinBod',
+    url: 'https://minbod.netlify.app',
+    logo: 'https://minbod.netlify.app/placeholder-logo.png',
+    description: 'Connect with trusted health and wellness professionals including therapists, psychiatrists, health coaches, personal trainers, and registered dietitians.',
+    sameAs: [
+      // Add social media profiles when available
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Service',
+      availableLanguage: 'English',
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://minbod.netlify.app/search?query={search_term_string}',
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      
       <Header />
 
       <main>

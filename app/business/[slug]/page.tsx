@@ -118,8 +118,87 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
     notFound()
   }
 
+  // JSON-LD Structured Data for LocalBusiness
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: business.name,
+    description: business.description,
+    image: business.profile_image || (business.images && business.images.length > 0 ? business.images[0] : undefined),
+    url: `${env.app.url}/business/${business.slug}`,
+    telephone: business.phone,
+    email: business.email,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: business.address,
+      addressLocality: business.city,
+      addressRegion: business.state,
+      postalCode: business.zip_code,
+      addressCountry: 'US',
+    },
+    ...(business.latitude && business.longitude && {
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: business.latitude,
+        longitude: business.longitude,
+      },
+    }),
+    ...(business.review_count > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: business.rating,
+        reviewCount: business.review_count,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }),
+    priceRange: business.category === 'Therapist' ? '$$' : undefined,
+    openingHoursSpecification: business.hours ? Object.entries(business.hours as Record<string, any>).map(([day, hours]: [string, any]) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: day.charAt(0).toUpperCase() + day.slice(1),
+      opens: hours?.open || '09:00',
+      closes: hours?.close || '17:00',
+    })) : undefined,
+  }
+
+  // Breadcrumb JSON-LD
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: env.app.url,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: business.category,
+        item: `${env.app.url}/search?category=${encodeURIComponent(business.category)}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: business.name,
+        item: `${env.app.url}/business/${business.slug}`,
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      
       <Header />
       <BusinessHeader business={business} />
       
