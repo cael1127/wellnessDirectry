@@ -27,7 +27,7 @@ const optionalEnvVars = {
   STRIPE_PREMIUM_PRICE_ID: process.env.STRIPE_PREMIUM_PRICE_ID,
   STRIPE_ENVIRONMENT: process.env.STRIPE_ENVIRONMENT || 'test',
   STRIPE_ACCOUNT_ID: process.env.STRIPE_ACCOUNT_ID,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' ? 'https://minbod.netlify.app' : 'http://localhost:3000'),
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123', // Default password (change in production!)
   NODE_ENV: process.env.NODE_ENV || 'development',
 } as const
