@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Get current date once for consistency
   const currentDate = getISODate()
 
-  // Static pages with consistent ISO date strings
+  // Static pages with consistent ISO date strings - ALWAYS return these
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -51,7 +51,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
+  // Always return static pages first, then try to add business pages
+  console.log(`Sitemap: Starting with ${staticPages.length} static pages`)
+
   try {
+    // Check if we have the required environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.log('Sitemap: Missing Supabase environment variables, returning static pages only')
+      return staticPages
+    }
+
     // Fetch all published businesses from Supabase
     const supabase = await createClient()
     const { data: businesses, error } = await supabase
@@ -62,13 +74,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(1000) // Limit to 1000 businesses to avoid sitemap size issues
 
     if (error) {
-      console.error('Error fetching businesses for sitemap:', error)
-      // Return static pages if database fails
+      console.error('Sitemap: Error fetching businesses:', error)
       return staticPages
     }
 
     if (!businesses || businesses.length === 0) {
-      console.log('No verified businesses found for sitemap')
+      console.log('Sitemap: No verified businesses found, returning static pages only')
       return staticPages
     }
 
@@ -82,12 +93,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       }))
 
-    console.log(`Sitemap generated with ${staticPages.length} static pages and ${businessPages.length} business pages`)
+    console.log(`Sitemap: Generated with ${staticPages.length} static pages and ${businessPages.length} business pages`)
     
     return [...staticPages, ...businessPages]
   } catch (error) {
-    console.error('Error generating sitemap:', error)
-    // Return static pages even if dynamic pages fail
+    console.error('Sitemap: Error generating sitemap:', error)
+    // Always return static pages even if dynamic pages fail
     return staticPages
   }
 }
