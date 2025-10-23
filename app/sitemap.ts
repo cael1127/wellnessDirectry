@@ -4,39 +4,48 @@ import { createClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // Revalidate every hour
 
+// Helper function to get consistent date format
+function getISODate(date?: string | Date): string {
+  const d = date ? new Date(date) : new Date()
+  return d.toISOString()
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Use direct environment variable access to avoid issues
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://minbod.netlify.app'
+  
+  // Get current date once for consistency
+  const currentDate = getISODate()
 
-  // Static pages with proper ISO date strings
+  // Static pages with consistent ISO date strings
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: new Date().toISOString(),
+      lastModified: currentDate,
       changeFrequency: 'daily' as const,
       priority: 1.0,
     },
     {
       url: `${baseUrl}/search`,
-      lastModified: new Date().toISOString(),
+      lastModified: currentDate,
       changeFrequency: 'daily' as const,
       priority: 0.9,
     },
     {
       url: `${baseUrl}/register`,
-      lastModified: new Date().toISOString(),
+      lastModified: currentDate,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     },
     {
       url: `${baseUrl}/subscribe`,
-      lastModified: new Date().toISOString(),
+      lastModified: currentDate,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     },
     {
       url: `${baseUrl}/onboard`,
-      lastModified: new Date().toISOString(),
+      lastModified: currentDate,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     },
@@ -54,6 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (error) {
       console.error('Error fetching businesses for sitemap:', error)
+      // Return static pages if database fails
       return staticPages
     }
 
@@ -62,12 +72,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return staticPages
     }
 
-    // Dynamic business pages with proper date handling
+    // Dynamic business pages with consistent date handling
     const businessPages: MetadataRoute.Sitemap = businesses
-      .filter(business => business.slug) // Only include businesses with valid slugs
+      .filter(business => business.slug && business.slug.trim() !== '') // Only include businesses with valid, non-empty slugs
       .map((business) => ({
         url: `${baseUrl}/business/${business.slug}`,
-        lastModified: business.updated_at ? new Date(business.updated_at).toISOString() : new Date().toISOString(),
+        lastModified: getISODate(business.updated_at),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
       }))
