@@ -21,6 +21,8 @@ function makeRequest(url, userAgent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +
         'User-Agent': userAgent,
         'Accept': 'application/xml, text/xml, */*',
         'Accept-Encoding': 'gzip, deflate',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
       }
     };
     
